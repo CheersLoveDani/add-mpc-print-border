@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pillow = ">=10.0.0"
+pyreadline3 = "*"
 
 [dev-packages]
 pytest = "*"

@@ -1,3 +1,5 @@
 /.pytest_cache
 /.venv
 /Pipfile.lock
+# History file
+.mpc_bleed_history

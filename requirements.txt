@@ -1,1 +1,2 @@
 Pillow>=10.0.0
+pyreadline3>=3.4.1; sys_platform == "win32"

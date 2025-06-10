@@ -17,6 +17,19 @@ import threading
 import time
 from typing import List, Tuple, Optional
 
+# Add readline support for input history
+try:
+    import readline
+    READLINE_AVAILABLE = True
+except ImportError:
+    # readline is not available on Windows by default
+    READLINE_AVAILABLE = False
+    try:
+        import pyreadline3 as readline
+        READLINE_AVAILABLE = True
+    except ImportError:
+        READLINE_AVAILABLE = False
+
 class TerminalColors:
     """ANSI color codes for terminal output"""
     RESET = '\033[0m'
@@ -78,15 +91,29 @@ def print_banner():
 """
     print(banner)
 
-def get_folder_path(prompt: str, must_exist: bool = True) -> Path:
-    """Get and validate a folder path from user input"""
+def get_folder_path(prompt: str, must_exist: bool = True, history=None) -> Path:
+    """Get and validate a folder path from user input with history support"""
     while True:
         print(f"\n{TerminalColors.YELLOW}{prompt}{TerminalColors.RESET}")
-        path_str = input("Path: ").strip().strip('"\'')
+        
+        if READLINE_AVAILABLE:
+            print(f"{TerminalColors.CYAN}💡 Tip: Use ↑/↓ arrows to navigate input history{TerminalColors.RESET}")
+        
+        try:
+            path_str = input("Path: ").strip().strip('"\'')
+        except KeyboardInterrupt:
+            print(f"\n{TerminalColors.YELLOW}Operation cancelled by user.{TerminalColors.RESET}")
+            if history:
+                history.save_history()
+            sys.exit(0)
         
         if not path_str:
             print(f"{TerminalColors.RED}Please enter a valid path.{TerminalColors.RESET}")
             continue
+        
+        # Add to history
+        if history:
+            history.add_to_history(path_str)
             
         path = Path(path_str)
         
@@ -236,17 +263,63 @@ def process_images(image_files: List[Path], output_folder: Path):
     if failed > 0:
         print(f"{TerminalColors.RED}✗ Failed to process: {failed} images{TerminalColors.RESET}")
 
+class InputHistory:
+    """Manages input history for the application"""
+    
+    def __init__(self):
+        self.history_file = Path.home() / ".mpc_bleed_history"
+        self.setup_history()
+    
+    def setup_history(self):
+        """Set up readline history if available"""
+        if not READLINE_AVAILABLE:
+            return
+            
+        # Set history length
+        readline.set_history_length(100)
+        
+        # Load existing history
+        if self.history_file.exists():
+            try:
+                readline.read_history_file(str(self.history_file))
+            except:
+                pass  # Ignore errors loading history
+    
+    def save_history(self):
+        """Save current history to file"""
+        if not READLINE_AVAILABLE:
+            return
+            
+        try:
+            readline.write_history_file(str(self.history_file))
+        except:
+            pass  # Ignore errors saving history
+    
+    def add_to_history(self, text: str):
+        """Add an entry to history"""
+        if READLINE_AVAILABLE and text.strip():
+            readline.add_history(text.strip())
+
 def main():
     """Main application function"""
+    # Initialize input history
+    history = InputHistory()
+    
     try:
         # Print banner
         print_banner()
         
+        # Show readline status
+        if READLINE_AVAILABLE:
+            print(f"{TerminalColors.GREEN}✓ Input history enabled - use ↑/↓ arrows to navigate previous inputs{TerminalColors.RESET}")
+        else:
+            print(f"{TerminalColors.YELLOW}ℹ Install 'pyreadline3' for input history support{TerminalColors.RESET}")
+        
         # Get input folder
-        input_folder = get_folder_path("Enter the input folder path (containing images):", must_exist=True)
+        input_folder = get_folder_path("Enter the input folder path (containing images):", must_exist=True, history=history)
         
         # Get output folder
-        output_folder = get_folder_path("Enter the output folder path (where bordered images will be saved):", must_exist=False)
+        output_folder = get_folder_path("Enter the output folder path (where bordered images will be saved):", must_exist=False, history=history)
         
         # Create output folder if it doesn't exist
         if not output_folder.exists():
@@ -275,7 +348,11 @@ def main():
         
         # Confirm before processing
         print(f"\n{TerminalColors.YELLOW}Press Enter to continue or Ctrl+C to cancel...{TerminalColors.RESET}")
-        input()
+        try:
+            input()
+        except KeyboardInterrupt:
+            print(f"\n{TerminalColors.YELLOW}Operation cancelled by user.{TerminalColors.RESET}")
+            return
         
         # Process images
         process_images(image_files, output_folder)
@@ -287,6 +364,9 @@ def main():
         print(f"\n\n{TerminalColors.YELLOW}Operation cancelled by user.{TerminalColors.RESET}")
     except Exception as e:
         print(f"\n{TerminalColors.RED}An unexpected error occurred: {e}{TerminalColors.RESET}")
+    finally:
+        # Save history before exiting
+        history.save_history()
 
 if __name__ == "__main__":
     main()

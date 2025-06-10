@@ -10,6 +10,7 @@ A Python script that adds appropriate bleed borders to images for MPC (Make Play
 - ✨ Beautiful terminal interface with colors
 - 🖼️ Supports multiple image formats (JPG, PNG, BMP, TIFF, WebP)
 - 🌈 Extends the actual image content outward for natural-looking bleeds
+- 📜 **Input history** - use ↑/↓ arrows to recall previous folder paths
 
 ## How It Works
 
@@ -68,8 +69,9 @@ python add_mpc_bleed.py
 1. Follow the prompts:
    - Enter the path to your input folder (containing the images)
    - Enter the path to your output folder (where bordered images will be saved)
+   - **💡 Tip**: Use ↑/↓ arrow keys to navigate through previously entered paths
 
-3. The script will:
+2. The script will:
    - Scan for images in the input folder
    - Show you a summary of what it found
    - Ask for confirmation before processing
